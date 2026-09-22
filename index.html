@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AR 보물찾기 - 사진 A → A_1</title>
+
+  <!-- MindAR 공식 문서 예제 조합 -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { background: #000; }
+
+    #hud {
+      position: fixed; z-index: 20; top: 0; left: 0; right: 0;
+      padding: max(14px, env(safe-area-inset-top)) 14px 10px;
+      pointer-events: none;
+    }
+    .hud-card {
+      max-width: 520px; margin: 0 auto; padding: 12px 14px;
+      background: rgba(15, 23, 42, .82); color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 16px; backdrop-filter: blur(10px);
+    }
+    .hud-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .title { font-weight: 800; font-size: 16px; }
+    .small { font-size: 13px; opacity: .88; line-height: 1.45; }
+    .progress-track { margin-top: 9px; height: 8px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; }
+    .progress-bar { width: 0%; height: 100%; background: #38bdf8; transition: width .25s ease; }
+
+    #startScreen, #quizModal, #successModal {
+      position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(2,6,23,.78);
+    }
+    .panel {
+      width: min(92vw, 480px); background: #fff; color: #111827;
+      border-radius: 22px; padding: 22px; box-shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+    .panel h1, .panel h2 { margin: 0 0 10px; }
+    .panel p { margin: 0 0 14px; line-height: 1.55; }
+    .primary, .answer, .close-btn {
+      width: 100%; min-height: 48px; border: 0; border-radius: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .primary { background: #0f172a; color: #fff; }
+    .answer { margin-top: 9px; background: #f1f5f9; color: #0f172a; }
+    .answer:active { transform: scale(.99); }
+    .close-btn { margin-top: 10px; background: #e2e8f0; color: #0f172a; }
+
+    #scanGuide {
+      position: fixed; z-index: 18; left: 50%; bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%); width: min(88vw, 420px);
+      padding: 12px 14px; border-radius: 16px;
+      background: rgba(15,23,42,.78); color: #fff; text-align: center;
+      font-size: 14px; line-height: 1.4; pointer-events: none;
+    }
+    #tapHint {
+      display: none;
+      position: fixed; z-index: 19; left: 50%; bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px));
+      transform: translateX(-50%); width: max-content; max-width: 86vw;
+      padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.94);
+      color: #111827; font-weight: 800; font-size: 14px; pointer-events: none;
+    }
+    .hidden { display: none !important; }
+    .status-ok { color: #047857; font-weight: 800; }
+    .status-no { color: #b91c1c; font-weight: 800; }
+  </style>
+</head>
+
+<body>
+  <!-- 상단 진행상황 -->
+  <div id="hud">
+    <div class="hud-card">
+      <div class="hud-row">
+        <div class="title">AR 보물찾기</div>
+        <div id="scoreText" class="small">점수 0 · 진행 0/1</div>
+      </div>
+      <div id="hintText" class="small">힌트: 사진 A를 찾아 카메라로 비춰보세요.</div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+    </div>
+  </div>
+
+  <div id="scanGuide">카메라를 사진 A에 천천히 맞춰보세요.</div>
+  <div id="tapHint">등장한 캐릭터를 터치하세요 👆</div>
+
+  <!-- 시작 화면 -->
+  <div id="startScreen">
+    <div class="panel">
+      <h1>🔎 AR 보물찾기</h1>
+      <p>
+        사진 A를 카메라로 인식하면 <strong>A_1 이미지</strong>가 AR로 나타납니다.
+        A_1을 터치하면 퀴즈가 열립니다.
+      </p>
+      <p class="small">
+        카메라 권한이 필요합니다. 실제 배포 시 HTTPS 주소에서 실행하세요.
+      </p>
+      <button id="startBtn" class="primary" type="button">AR 탐색 시작</button>
+      <p id="startStatus" class="small" style="margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- 퀴즈 -->
+  <div id="quizModal" class="hidden">
+    <div class="panel">
+      <h2>🤖 미션</h2>
+      <p id="questionText">인공지능의 영어 약자는 무엇일까요?</p>
+
+      <button class="answer" type="button" data-answer="AI">AI</button>
+      <button class="answer" type="button" data-answer="VR">VR</button>
+      <button class="answer" type="button" data-answer="AR">AR</button>
+
+      <p id="quizResult" class="small" style="margin-top:12px;"></p>
+      <button id="quizCloseBtn" class="close-btn" type="button">닫기</button>
+    </div>
+  </div>
+
+  <!-- 성공 화면 -->
+  <div id="successModal" class="hidden">
+    <div class="panel">
+      <h2>🎉 첫 번째 보물 발견!</h2>
+      <p>정답입니다. 사진 A 미션을 완료했습니다.</p>
+      <p><strong>다음 힌트:</strong> <span id="nextHintText">다음 장소를 찾아보세요!</span></p>
+      <button id="successCloseBtn" class="primary" type="button">계속 탐색하기</button>
+    </div>
+  </div>
+
+  <!-- AR Scene -->
+  <!--
+    targets.mind 안의 첫 번째 이미지가 targetIndex: 0 = 사진 A 입니다.
+    assets/A_1.png 또는 assets/A_1.svg가 사진 A 인식 후 화면에 뜹니다.
+  -->
+  <a-scene
+    id="arScene"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-assets>
+      <!-- PNG로 바꾸려면 src="./assets/A_1.png" 로 수정 -->
+      <img id="overlayA1" src="./assets/A_1.svg" crossorigin="anonymous" />
+    </a-assets>
+
+    <!-- 모바일 터치/클릭으로 AR 오브젝트 선택 -->
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+      cursor="fuse: false; rayOrigin: mouse;"
+      raycaster="objects: .clickable"
+    ></a-camera>
+
+    <!-- 사진 A -->
+    <a-entity id="targetA" mindar-image-target="targetIndex: 0">
+      <a-plane
+        id="overlayPlaneA1"
+        class="clickable"
+        src="#overlayA1"
+        position="0 0 0.05"
+        width="1"
+        height="1"
+        material="transparent: true; alphaTest: 0.05;"
+        animation="property: scale; from: 0.92 0.92 0.92; to: 1.04 1.04 1.04; dur: 700; dir: alternate; loop: true; easing: easeInOutSine"
+      ></a-plane>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // ==============================
+    // 수업용으로 여기만 바꾸면 됨
+    // ==============================
+    const GAME = {
+      totalMissions: 1,
+      pointsPerMission: 10,
+      correctAnswer: "AI",
+      nextHint: "다음 장소는 책이 가장 많은 곳입니다."
+    };
+
+    let score = 0;
+    let completed = false;
+    let arSystem = null;
+
+    const scene = document.querySelector("#arScene");
+    const targetA = document.querySelector("#targetA");
+    const overlayA1 = document.querySelector("#overlayPlaneA1");
+
+    const startScreen = document.querySelector("#startScreen");
+    const startBtn = document.querySelector("#startBtn");
+    const startStatus = document.querySelector("#startStatus");
+
+    const scanGuide = document.querySelector("#scanGuide");
+    const tapHint = document.querySelector("#tapHint");
+
+    const quizModal = document.querySelector("#quizModal");
+    const quizResult = document.querySelector("#quizResult");
+    const quizCloseBtn = document.querySelector("#quizCloseBtn");
+
+    const successModal = document.querySelector("#successModal");
+    const successCloseBtn = document.querySelector("#successCloseBtn");
+    const nextHintText = document.querySelector("#nextHintText");
+
+    const scoreText = document.querySelector("#scoreText");
+    const progressBar = document.querySelector("#progressBar");
+    const hintText = document.querySelector("#hintText");
+
+    function refreshHUD() {
+      const done = completed ? 1 : 0;
+      scoreText.textContent = `점수 ${score} · 진행 ${done}/${GAME.totalMissions}`;
+      progressBar.style.width = `${(done / GAME.totalMissions) * 100}%`;
+
+      if (completed) {
+        hintText.textContent = `다음 힌트: ${GAME.nextHint}`;
+      } else {
+        hintText.textContent = "힌트: 사진 A를 찾아 카메라로 비춰보세요.";
+      }
+    }
+
+    scene.addEventListener("loaded", () => {
+      arSystem = scene.systems["mindar-image-system"];
+    });
+
+    scene.addEventListener("arReady", () => {
+      startStatus.textContent = "카메라 준비 완료";
+      startStatus.className = "small status-ok";
+      startScreen.classList.add("hidden");
+    });
+
+    scene.addEventListener("arError", () => {
+      startStatus.textContent = "카메라를 시작하지 못했습니다. 권한과 HTTPS 주소를 확인해 주세요.";
+      startStatus.className = "small status-no";
+      startBtn.disabled = false;
+    });
+
+    startBtn.addEventListener("click", async () => {
+      startBtn.disabled = true;
+      startStatus.textContent = "카메라를 준비하는 중...";
+      startStatus.className = "small";
+
+      try {
+        if (!arSystem) {
+          // scene loaded 타이밍이 늦은 경우 잠깐 기다림
+          await new Promise(resolve => setTimeout(resolve, 400));
+          arSystem = scene.systems["mindar-image-system"];
+        }
+        if (!arSystem) throw new Error("MindAR system not ready");
+        await arSystem.start();
+      } catch (err) {
+        console.error(err);
+        startStatus.textContent = "실행 실패: 카메라 권한 또는 targets.mind 파일을 확인해 주세요.";
+        startStatus.className = "small status-no";
+        startBtn.disabled = false;
+      }
+    });
+
+    // 사진 A를 찾았을 때
+    targetA.addEventListener("targetFound", () => {
+      scanGuide.textContent = "사진 A를 찾았습니다!";
+      tapHint.style.display = "block";
+    });
+
+    targetA.addEventListener("targetLost", () => {
+      scanGuide.textContent = completed
+        ? "미션 완료! 다음 장소로 이동하세요."
+        : "사진 A가 화면에서 벗어났습니다. 다시 맞춰보세요.";
+      tapHint.style.display = "none";
+    });
+
+    // 화면에 뜬 A_1 이미지를 터치하면 퀴즈
+    overlayA1.addEventListener("click", () => {
+      if (completed) {
+        successModal.classList.remove("hidden");
+        return;
+      }
+
+      quizResult.textContent = "";
+      quizModal.classList.remove("hidden");
+    });
+
+    document.querySelectorAll(".answer").forEach(button => {
+      button.addEventListener("click", () => {
+        const answer = button.dataset.answer;
+
+        if (answer === GAME.correctAnswer) {
+          quizResult.textContent = "정답입니다! 보물을 획득했습니다.";
+          quizResult.className = "small status-ok";
+
+          if (!completed) {
+            completed = true;
+            score += GAME.pointsPerMission;
+            nextHintText.textContent = GAME.nextHint;
+            refreshHUD();
+          }
+
+          setTimeout(() => {
+            quizModal.classList.add("hidden");
+            successModal.classList.remove("hidden");
+          }, 500);
+        } else {
+          quizResult.textContent = "아쉽습니다. 다시 선택해 보세요.";
+          quizResult.className = "small status-no";
+        }
+      });
+    });
+
+    quizCloseBtn.addEventListener("click", () => {
+      quizModal.classList.add("hidden");
+    });
+
+    successCloseBtn.addEventListener("click", () => {
+      successModal.classList.add("hidden");
+      scanGuide.textContent = "미션 완료! 다음 장소로 이동하세요.";
+    });
+
+    refreshHUD();
+  </script>
+</body>
+</html>
