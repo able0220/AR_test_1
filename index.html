@@ -1,321 +1,88 @@
 <!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AR 보물찾기 - 사진 A → A_1</title>
-
-  <!-- MindAR 공식 문서 예제 조합 -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { background: #000; }
-
-    #hud {
-      position: fixed; z-index: 20; top: 0; left: 0; right: 0;
-      padding: max(14px, env(safe-area-inset-top)) 14px 10px;
-      pointer-events: none;
-    }
-    .hud-card {
-      max-width: 520px; margin: 0 auto; padding: 12px 14px;
-      background: rgba(15, 23, 42, .82); color: #fff;
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 16px; backdrop-filter: blur(10px);
-    }
-    .hud-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-    .title { font-weight: 800; font-size: 16px; }
-    .small { font-size: 13px; opacity: .88; line-height: 1.45; }
-    .progress-track { margin-top: 9px; height: 8px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; }
-    .progress-bar { width: 0%; height: 100%; background: #38bdf8; transition: width .25s ease; }
-
-    #startScreen, #quizModal, #successModal {
-      position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
-      padding: 20px; background: rgba(2,6,23,.78);
-    }
-    .panel {
-      width: min(92vw, 480px); background: #fff; color: #111827;
-      border-radius: 22px; padding: 22px; box-shadow: 0 18px 60px rgba(0,0,0,.35);
-    }
-    .panel h1, .panel h2 { margin: 0 0 10px; }
-    .panel p { margin: 0 0 14px; line-height: 1.55; }
-    .primary, .answer, .close-btn {
-      width: 100%; min-height: 48px; border: 0; border-radius: 14px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-    }
-    .primary { background: #0f172a; color: #fff; }
-    .answer { margin-top: 9px; background: #f1f5f9; color: #0f172a; }
-    .answer:active { transform: scale(.99); }
-    .close-btn { margin-top: 10px; background: #e2e8f0; color: #0f172a; }
-
-    #scanGuide {
-      position: fixed; z-index: 18; left: 50%; bottom: max(24px, env(safe-area-inset-bottom));
-      transform: translateX(-50%); width: min(88vw, 420px);
-      padding: 12px 14px; border-radius: 16px;
-      background: rgba(15,23,42,.78); color: #fff; text-align: center;
-      font-size: 14px; line-height: 1.4; pointer-events: none;
-    }
-    #tapHint {
-      display: none;
-      position: fixed; z-index: 19; left: 50%; bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px));
-      transform: translateX(-50%); width: max-content; max-width: 86vw;
-      padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.94);
-      color: #111827; font-weight: 800; font-size: 14px; pointer-events: none;
-    }
-    .hidden { display: none !important; }
-    .status-ok { color: #047857; font-weight: 800; }
-    .status-no { color: #b91c1c; font-weight: 800; }
-  </style>
-</head>
-
-<body>
-  <!-- 상단 진행상황 -->
-  <div id="hud">
-    <div class="hud-card">
-      <div class="hud-row">
-        <div class="title">AR 보물찾기</div>
-        <div id="scoreText" class="small">점수 0 · 진행 0/1</div>
-      </div>
-      <div id="hintText" class="small">힌트: 사진 A를 찾아 카메라로 비춰보세요.</div>
-      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-    </div>
-  </div>
-
-  <div id="scanGuide">카메라를 사진 A에 천천히 맞춰보세요.</div>
-  <div id="tapHint">등장한 캐릭터를 터치하세요 👆</div>
-
-  <!-- 시작 화면 -->
-  <div id="startScreen">
-    <div class="panel">
-      <h1>🔎 AR 보물찾기</h1>
-      <p>
-        사진 A를 카메라로 인식하면 <strong>A_1 이미지</strong>가 AR로 나타납니다.
-        A_1을 터치하면 퀴즈가 열립니다.
-      </p>
-      <p class="small">
-        카메라 권한이 필요합니다. 실제 배포 시 HTTPS 주소에서 실행하세요.
-      </p>
-      <button id="startBtn" class="primary" type="button">AR 탐색 시작</button>
-      <p id="startStatus" class="small" style="margin-top:10px;"></p>
-    </div>
-  </div>
-
-  <!-- 퀴즈 -->
-  <div id="quizModal" class="hidden">
-    <div class="panel">
-      <h2>🤖 미션</h2>
-      <p id="questionText">인공지능의 영어 약자는 무엇일까요?</p>
-
-      <button class="answer" type="button" data-answer="AI">AI</button>
-      <button class="answer" type="button" data-answer="VR">VR</button>
-      <button class="answer" type="button" data-answer="AR">AR</button>
-
-      <p id="quizResult" class="small" style="margin-top:12px;"></p>
-      <button id="quizCloseBtn" class="close-btn" type="button">닫기</button>
-    </div>
-  </div>
-
-  <!-- 성공 화면 -->
-  <div id="successModal" class="hidden">
-    <div class="panel">
-      <h2>🎉 첫 번째 보물 발견!</h2>
-      <p>정답입니다. 사진 A 미션을 완료했습니다.</p>
-      <p><strong>다음 힌트:</strong> <span id="nextHintText">다음 장소를 찾아보세요!</span></p>
-      <button id="successCloseBtn" class="primary" type="button">계속 탐색하기</button>
-    </div>
-  </div>
-
-  <!-- AR Scene -->
-  <!--
-    targets.mind 안의 첫 번째 이미지가 targetIndex: 0 = 사진 A 입니다.
-    assets/A_1.png 또는 assets/A_1.svg가 사진 A 인식 후 화면에 뜹니다.
-  -->
-  <a-scene
-    id="arScene"
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001;"
-    color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-    embedded
-  >
-    <a-assets>
-      <!-- PNG로 바꾸려면 src="./assets/A_1.png" 로 수정 -->
-      <img id="overlayA1" src="./assets/A_1.svg" crossorigin="anonymous" />
-    </a-assets>
-
-    <!-- 모바일 터치/클릭으로 AR 오브젝트 선택 -->
-    <a-camera
-      position="0 0 0"
-      look-controls="enabled: false"
-      cursor="fuse: false; rayOrigin: mouse;"
-      raycaster="objects: .clickable"
-    ></a-camera>
-
-    <!-- 사진 A -->
-    <a-entity id="targetA" mindar-image-target="targetIndex: 0">
-      <a-plane
-        id="overlayPlaneA1"
-        class="clickable"
-        src="#overlayA1"
-        position="0 0 0.05"
-        width="1"
-        height="1"
-        material="transparent: true; alphaTest: 0.05;"
-        animation="property: scale; from: 0.92 0.92 0.92; to: 1.04 1.04 1.04; dur: 700; dir: alternate; loop: true; easing: easeInOutSine"
-      ></a-plane>
-    </a-entity>
-  </a-scene>
-
-  <script>
-    // ==============================
-    // 수업용으로 여기만 바꾸면 됨
-    // ==============================
-    const GAME = {
-      totalMissions: 1,
-      pointsPerMission: 10,
-      correctAnswer: "AI",
-      nextHint: "다음 장소는 책이 가장 많은 곳입니다."
-    };
-
-    let score = 0;
-    let completed = false;
-    let arSystem = null;
-
-    const scene = document.querySelector("#arScene");
-    const targetA = document.querySelector("#targetA");
-    const overlayA1 = document.querySelector("#overlayPlaneA1");
-
-    const startScreen = document.querySelector("#startScreen");
-    const startBtn = document.querySelector("#startBtn");
-    const startStatus = document.querySelector("#startStatus");
-
-    const scanGuide = document.querySelector("#scanGuide");
-    const tapHint = document.querySelector("#tapHint");
-
-    const quizModal = document.querySelector("#quizModal");
-    const quizResult = document.querySelector("#quizResult");
-    const quizCloseBtn = document.querySelector("#quizCloseBtn");
-
-    const successModal = document.querySelector("#successModal");
-    const successCloseBtn = document.querySelector("#successCloseBtn");
-    const nextHintText = document.querySelector("#nextHintText");
-
-    const scoreText = document.querySelector("#scoreText");
-    const progressBar = document.querySelector("#progressBar");
-    const hintText = document.querySelector("#hintText");
-
-    function refreshHUD() {
-      const done = completed ? 1 : 0;
-      scoreText.textContent = `점수 ${score} · 진행 ${done}/${GAME.totalMissions}`;
-      progressBar.style.width = `${(done / GAME.totalMissions) * 100}%`;
-
-      if (completed) {
-        hintText.textContent = `다음 힌트: ${GAME.nextHint}`;
-      } else {
-        hintText.textContent = "힌트: 사진 A를 찾아 카메라로 비춰보세요.";
-      }
-    }
-
-    scene.addEventListener("loaded", () => {
-      arSystem = scene.systems["mindar-image-system"];
-    });
-
-    scene.addEventListener("arReady", () => {
-      startStatus.textContent = "카메라 준비 완료";
-      startStatus.className = "small status-ok";
-      startScreen.classList.add("hidden");
-    });
-
-    scene.addEventListener("arError", () => {
-      startStatus.textContent = "카메라를 시작하지 못했습니다. 권한과 HTTPS 주소를 확인해 주세요.";
-      startStatus.className = "small status-no";
-      startBtn.disabled = false;
-    });
-
-    startBtn.addEventListener("click", async () => {
-      startBtn.disabled = true;
-      startStatus.textContent = "카메라를 준비하는 중...";
-      startStatus.className = "small";
-
-      try {
-        if (!arSystem) {
-          // scene loaded 타이밍이 늦은 경우 잠깐 기다림
-          await new Promise(resolve => setTimeout(resolve, 400));
-          arSystem = scene.systems["mindar-image-system"];
-        }
-        if (!arSystem) throw new Error("MindAR system not ready");
-        await arSystem.start();
-      } catch (err) {
-        console.error(err);
-        startStatus.textContent = "실행 실패: 카메라 권한 또는 targets.mind 파일을 확인해 주세요.";
-        startStatus.className = "small status-no";
-        startBtn.disabled = false;
-      }
-    });
-
-    // 사진 A를 찾았을 때
-    targetA.addEventListener("targetFound", () => {
-      scanGuide.textContent = "사진 A를 찾았습니다!";
-      tapHint.style.display = "block";
-    });
-
-    targetA.addEventListener("targetLost", () => {
-      scanGuide.textContent = completed
-        ? "미션 완료! 다음 장소로 이동하세요."
-        : "사진 A가 화면에서 벗어났습니다. 다시 맞춰보세요.";
-      tapHint.style.display = "none";
-    });
-
-    // 화면에 뜬 A_1 이미지를 터치하면 퀴즈
-    overlayA1.addEventListener("click", () => {
-      if (completed) {
-        successModal.classList.remove("hidden");
-        return;
-      }
-
-      quizResult.textContent = "";
-      quizModal.classList.remove("hidden");
-    });
-
-    document.querySelectorAll(".answer").forEach(button => {
-      button.addEventListener("click", () => {
-        const answer = button.dataset.answer;
-
-        if (answer === GAME.correctAnswer) {
-          quizResult.textContent = "정답입니다! 보물을 획득했습니다.";
-          quizResult.className = "small status-ok";
-
-          if (!completed) {
-            completed = true;
-            score += GAME.pointsPerMission;
-            nextHintText.textContent = GAME.nextHint;
-            refreshHUD();
-          }
-
-          setTimeout(() => {
-            quizModal.classList.add("hidden");
-            successModal.classList.remove("hidden");
-          }, 500);
-        } else {
-          quizResult.textContent = "아쉽습니다. 다시 선택해 보세요.";
-          quizResult.className = "small status-no";
-        }
-      });
-    });
-
-    quizCloseBtn.addEventListener("click", () => {
-      quizModal.classList.add("hidden");
-    });
-
-    successCloseBtn.addEventListener("click", () => {
-      successModal.classList.add("hidden");
-      scanGuide.textContent = "미션 완료! 다음 장소로 이동하세요.";
-    });
-
-    refreshHUD();
-  </script>
-</body>
-</html>
+<html lang="ko"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>우리 마을 AR 캐릭터 찾기</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+*{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:white}
+a-scene{position:fixed!important;inset:0}.top{position:fixed;top:0;left:0;right:0;z-index:15;padding:max(10px,env(safe-area-inset-top)) 10px 8px;pointer-events:none}.bar{max-width:650px;margin:auto;background:#0f172ad9;border:1px solid #ffffff29;padding:13px 15px;border-radius:16px;backdrop-filter:blur(8px)}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.muted{color:#cbd5e1;font-size:13px;line-height:1.45}.main{font-size:17px;font-weight:800}.meter{background:#ffffff24;height:7px;border-radius:99px;overflow:hidden;margin-top:9px}.meter>div{height:100%;width:0;background:#38bdf8;transition:width .25s}#bottom{position:fixed;z-index:15;left:50%;transform:translateX(-50%);bottom:max(20px,env(safe-area-inset-bottom));padding:10px 16px;max-width:94vw;text-align:center;border-radius:14px;background:#0f172ad9;font-size:14px;pointer-events:none}.veil{position:fixed;inset:0;display:flex;justify-content:center;align-items:center;padding:18px;background:#020617dc;z-index:40}.panel{background:white;color:#0f172a;max-width:490px;width:100%;border-radius:22px;padding:22px;max-height:90%;overflow:auto}.panel h1{margin:0 0 14px;font-size:22px}.panel p{line-height:1.55}.btn{width:100%;padding:14px;border:0;border-radius:12px;background:#0f172a;color:white;font-size:16px;font-weight:700;cursor:pointer}.secondary{background:#e2e8f0;color:#0f172a;margin-top:9px}.hidden{display:none!important}.confirmImg{width:100%;max-height:240px;object-fit:contain;background:#edf2f7;border-radius:12px}.small{font-size:12px;color:#475569}#openCard{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:17;display:none;border:0;border-radius:999px;background:white;color:#111827;padding:12px 22px;font-weight:800;font-size:15px;box-shadow:0 4px 16px #0004}#openCard.show{display:block}.thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;max-height:43vh;overflow:auto}.thumb{background:#f1f5f9;color:#111827;border:1px solid #cbd5e1;border-radius:10px;padding:5px 1px;min-height:42px;font-size:12px;cursor:pointer}.thumb.done{background:#dcfce7;border-color:#22c55e}#photoList{font-size:12px;max-height:190px;overflow:auto}
+</style></head><body>
+<div class="top"><div class="bar"><div class="row"><span class="main">🏕️ 우리 마을 AR 캐릭터 찾기</span><span id="count">0/25</span></div><div id="status" class="muted">시작 버튼을 누르고 장소를 카메라로 비춰주세요.</div><div class="meter"><div id="meterFill"></div></div></div></div>
+<div id="bottom">사물을 화면 가까이 비추고 잠시 기다려 주세요.</div>
+<button id="openCard" type="button">🔍 발견한 캐릭터 보기</button>
+<div id="start" class="veil"><div class="panel"><h1>🗺️ 마을 AR 캐릭터 찾기</h1><p>장소 사진 25개에 대응하는 캐릭터를 만나보세요. <strong>같은 번호는 같은 캐릭터</strong>로 연결됩니다.</p><p class="small">이 웹페이지를 스마트폰 HTTPS 주소로 열어야 카메라를 사용할 수 있어요. 위치 정보는 사용하지 않습니다.</p><button id="begin" class="btn" type="button">카메라 시작</button><p id="startMessage" class="small"></p><button id="showList" class="btn secondary" type="button">등록된 장소 목록 보기</button><div id="photoList" class="hidden"></div></div></div>
+<div id="detail" class="veil hidden"><div class="panel"><h1 id="detailTitle">캐릭터 발견</h1><img id="detailImage" class="confirmImg" alt="발견한 캐릭터"/><p id="detailDesc"></p><button id="closeDetail" class="btn" type="button">다른 장소 찾기</button><button id="viewCollection" class="btn secondary" type="button">수집 현황 보기</button></div></div>
+<div id="collection" class="veil hidden"><div class="panel"><h1>🎁 발견한 사진 목록</h1><p class="small">번호를 누르면 등록된 캐릭터 이름을 확인할 수 있어요. 찾지 않은 이미지는 잠금 표시로 보여요.</p><div id="collectionGrid" class="thumbs"></div><button id="closeCollection" class="btn secondary" type="button">돌아가기</button></div></div>
+<a-scene id="arScene" mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; autoStart: false;" color-space="sRGB" renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" embedded>
+<a-assets><img id="c0" src="./assets/characters/01.webp" crossorigin="anonymous"/>
+<img id="c1" src="./assets/characters/02.webp" crossorigin="anonymous"/>
+<img id="c2" src="./assets/characters/02.webp" crossorigin="anonymous"/>
+<img id="c3" src="./assets/characters/03.webp" crossorigin="anonymous"/>
+<img id="c4" src="./assets/characters/04.webp" crossorigin="anonymous"/>
+<img id="c5" src="./assets/characters/05.webp" crossorigin="anonymous"/>
+<img id="c6" src="./assets/characters/06.webp" crossorigin="anonymous"/>
+<img id="c7" src="./assets/characters/07.webp" crossorigin="anonymous"/>
+<img id="c8" src="./assets/characters/08.webp" crossorigin="anonymous"/>
+<img id="c9" src="./assets/characters/10.webp" crossorigin="anonymous"/>
+<img id="c10" src="./assets/characters/11.webp" crossorigin="anonymous"/>
+<img id="c11" src="./assets/characters/12.webp" crossorigin="anonymous"/>
+<img id="c12" src="./assets/characters/13.webp" crossorigin="anonymous"/>
+<img id="c13" src="./assets/characters/14.webp" crossorigin="anonymous"/>
+<img id="c14" src="./assets/characters/15.webp" crossorigin="anonymous"/>
+<img id="c15" src="./assets/characters/16.webp" crossorigin="anonymous"/>
+<img id="c16" src="./assets/characters/17.webp" crossorigin="anonymous"/>
+<img id="c17" src="./assets/characters/18.webp" crossorigin="anonymous"/>
+<img id="c18" src="./assets/characters/19.webp" crossorigin="anonymous"/>
+<img id="c19" src="./assets/characters/20_1.webp" crossorigin="anonymous"/>
+<img id="c20" src="./assets/characters/20_1.webp" crossorigin="anonymous"/>
+<img id="c21" src="./assets/characters/20_2.webp" crossorigin="anonymous"/>
+<img id="c22" src="./assets/characters/20_3.webp" crossorigin="anonymous"/>
+<img id="c23" src="./assets/characters/20_3.webp" crossorigin="anonymous"/>
+<img id="c24" src="./assets/characters/21.webp" crossorigin="anonymous"/></a-assets>
+<a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse:false;rayOrigin:mouse;" raycaster="objects:.clickable"></a-camera>
+<a-entity id="t0" mindar-image-target="targetIndex:0"><a-plane id="plane0" class="clickable" src="#c0" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t1" mindar-image-target="targetIndex:1"><a-plane id="plane1" class="clickable" src="#c1" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t2" mindar-image-target="targetIndex:2"><a-plane id="plane2" class="clickable" src="#c2" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t3" mindar-image-target="targetIndex:3"><a-plane id="plane3" class="clickable" src="#c3" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t4" mindar-image-target="targetIndex:4"><a-plane id="plane4" class="clickable" src="#c4" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t5" mindar-image-target="targetIndex:5"><a-plane id="plane5" class="clickable" src="#c5" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t6" mindar-image-target="targetIndex:6"><a-plane id="plane6" class="clickable" src="#c6" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t7" mindar-image-target="targetIndex:7"><a-plane id="plane7" class="clickable" src="#c7" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t8" mindar-image-target="targetIndex:8"><a-plane id="plane8" class="clickable" src="#c8" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t9" mindar-image-target="targetIndex:9"><a-plane id="plane9" class="clickable" src="#c9" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t10" mindar-image-target="targetIndex:10"><a-plane id="plane10" class="clickable" src="#c10" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t11" mindar-image-target="targetIndex:11"><a-plane id="plane11" class="clickable" src="#c11" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t12" mindar-image-target="targetIndex:12"><a-plane id="plane12" class="clickable" src="#c12" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t13" mindar-image-target="targetIndex:13"><a-plane id="plane13" class="clickable" src="#c13" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t14" mindar-image-target="targetIndex:14"><a-plane id="plane14" class="clickable" src="#c14" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t15" mindar-image-target="targetIndex:15"><a-plane id="plane15" class="clickable" src="#c15" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t16" mindar-image-target="targetIndex:16"><a-plane id="plane16" class="clickable" src="#c16" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t17" mindar-image-target="targetIndex:17"><a-plane id="plane17" class="clickable" src="#c17" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t18" mindar-image-target="targetIndex:18"><a-plane id="plane18" class="clickable" src="#c18" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t19" mindar-image-target="targetIndex:19"><a-plane id="plane19" class="clickable" src="#c19" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t20" mindar-image-target="targetIndex:20"><a-plane id="plane20" class="clickable" src="#c20" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t21" mindar-image-target="targetIndex:21"><a-plane id="plane21" class="clickable" src="#c21" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t22" mindar-image-target="targetIndex:22"><a-plane id="plane22" class="clickable" src="#c22" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t23" mindar-image-target="targetIndex:23"><a-plane id="plane23" class="clickable" src="#c23" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+<a-entity id="t24" mindar-image-target="targetIndex:24"><a-plane id="plane24" class="clickable" src="#c24" width="1" height="1" position="0 0 0.05" material="transparent:true;alphaTest:0.05;side:double" animation="property:scale;from:0.93 0.93 0.93;to:1.03 1.03 1.03;dur:800;dir:alternate;loop:true"></a-plane></a-entity>
+</a-scene>
+<script>
+const PLACES=[{"index": 0, "name": "1. 쌍봉산 전망대", "key": "01", "character": "1_쌍봉산_봉봉이_전설", "overlay": "assets/characters/01.webp", "photo": "compiler_photos/00_01_a.jpg"}, {"index": 1, "name": "2. 조암리 보호수", "key": "02", "character": "2_조암리_조암도리_일반", "overlay": "assets/characters/02.webp", "photo": "compiler_photos/01_02_a.jpg"}, {"index": 2, "name": "2_조암리보호수(노송)", "key": "02", "character": "2_조암리_조암도리_일반", "overlay": "assets/characters/02.webp", "photo": "compiler_photos/02_02_b.jpg"}, {"index": 3, "name": "3_수정마을 옛 샘터", "key": "03", "character": "3_수정이_일반", "overlay": "assets/characters/03.webp", "photo": "compiler_photos/03_03_a.jpg"}, {"index": 4, "name": "4_어은리 옛장안면사무소터", "key": "04", "character": "4_어은리_은어리_희귀", "overlay": "assets/characters/04.webp", "photo": "compiler_photos/04_04_a.jpg"}, {"index": 5, "name": "5_조암시장", "key": "05", "character": "5_조암시장_장터마스터_전설", "overlay": "assets/characters/05.webp", "photo": "compiler_photos/05_05_a.jpg"}, {"index": 6, "name": "6_운평1리 마을회관", "key": "06", "character": "6_운평리_구름이_일반", "overlay": "assets/characters/06.webp", "photo": "compiler_photos/06_06_a.jpg"}, {"index": 7, "name": "7_원안1리_거물마을", "key": "07", "character": "7_원안리정령_안이_희귀", "overlay": "assets/characters/07.webp", "photo": "compiler_photos/07_07_a.jpg"}, {"index": 8, "name": "8_화수초 독립운동기념비", "key": "08", "character": "8_화수리정령_물꽃이_희귀", "overlay": "assets/characters/08.webp", "photo": "compiler_photos/08_08_a.jpg"}, {"index": 9, "name": "10_멱우리", "key": "10", "character": "10_멱우리 정령_며구리_희귀", "overlay": "assets/characters/10.webp", "photo": "compiler_photos/09_10_a.jpg"}, {"index": 10, "name": "11_한각1리 정류장", "key": "11", "character": "11_한각리정령_한가이", "overlay": "assets/characters/11.webp", "photo": "compiler_photos/10_11_a.jpg"}, {"index": 11, "name": "12_사곡1리 장자터", "key": "12", "character": "12_사곡리정령_사곡이_전설", "overlay": "assets/characters/12.webp", "photo": "compiler_photos/11_12_a.jpg"}, {"index": 12, "name": "13_사랑1리 마을회관", "key": "13", "character": "13_사랑리정령_사랑이_일반", "overlay": "assets/characters/13.webp", "photo": "compiler_photos/12_13_a.jpg"}, {"index": 13, "name": "14_노진1리 경로당", "key": "14", "character": "14_노진리정령_가루_전설", "overlay": "assets/characters/14.webp", "photo": "compiler_photos/13_14_a.jpg"}, {"index": 14, "name": "15_이화3리 마을회관", "key": "15", "character": "15_이화리정령_이화이_희귀", "overlay": "assets/characters/15.webp", "photo": "compiler_photos/14_15_a.jpg"}, {"index": 15, "name": "16_화산2리 마을회관_배미", "key": "16", "character": "16_화산리정령_배미_전설", "overlay": "assets/characters/16.webp", "photo": "compiler_photos/15_16_a.jpg"}, {"index": 16, "name": "17_석천1리 마을회관_낭깨", "key": "17", "character": "17_석천리 정령_낭깨_일반", "overlay": "assets/characters/17.webp", "photo": "compiler_photos/16_17_a.jpg"}, {"index": 17, "name": "18_매향리 평화 생태공원", "key": "18", "character": "18_매향리정령_매향이_일반", "overlay": "assets/characters/18.webp", "photo": "compiler_photos/17_18_a.jpg"}, {"index": 18, "name": "19_덕다2리 마을회관(구래마을)", "key": "19", "character": "19_덕다2리정령_더부기_전설", "overlay": "assets/characters/19.webp", "photo": "compiler_photos/18_19_a.jpg"}, {"index": 19, "name": "20_1_독정1리(독쟁이)", "key": "20_1", "character": "20_1_독정1리_독이_희귀", "overlay": "assets/characters/20_1.webp", "photo": "compiler_photos/19_20_1_a.jpg"}, {"index": 20, "name": "20_1_독정1리(한천)", "key": "20_1", "character": "20_1_독정1리_독이_희귀", "overlay": "assets/characters/20_1.webp", "photo": "compiler_photos/20_20_1_b.jpg"}, {"index": 21, "name": "20_2_독정2리(감드러지) 정류장", "key": "20_2", "character": "20_2_독정2리정령_버선마리", "overlay": "assets/characters/20_2.webp", "photo": "compiler_photos/21_20_2_a.jpg"}, {"index": 22, "name": "20_3_독정3리(감드러지)", "key": "20_3", "character": "20_3_독정3리정령_감드러지", "overlay": "assets/characters/20_3.webp", "photo": "compiler_photos/22_20_3_a.jpg"}, {"index": 23, "name": "20_3_독정3리(거묵골)", "key": "20_3", "character": "20_3_독정3리정령_감드러지", "overlay": "assets/characters/20_3.webp", "photo": "compiler_photos/23_20_3_b.jpg"}, {"index": 24, "name": "21_장안8리(온수골_장명초)", "key": "21", "character": "21_장안리정령_온이", "overlay": "assets/characters/21.webp", "photo": "compiler_photos/24_21_a.jpg"}];
+const $=(x)=>document.getElementById(x);
+const found=new Set(); // 이 페이지가 열린 동안의 진행 상황만 표시
+let active=null; let system=null;
+function update(){ $('count').textContent=`${found.size}/${PLACES.length}`; $('meterFill').style.width=`${100*found.size/PLACES.length}%`; }
+function showDetail(i){const p=PLACES[i];active=i;found.add(i);update();$('detailTitle').textContent=`${i+1}번 · ${p.character}`;$('detailImage').src=p.overlay;$('detailDesc').textContent=`장소: ${p.name}`;$('detail').classList.remove('hidden');}
+function makeCollection(){const g=$('collectionGrid');g.replaceChildren();for(const p of PLACES){const b=document.createElement('button');b.type='button';b.className='thumb'+(found.has(p.index)?' done':'');b.textContent=found.has(p.index)?`${p.index+1} ✓`:`${p.index+1} 🔒`;b.onclick=()=>{if(found.has(p.index)){ $('collection').classList.add('hidden');showDetail(p.index); }};g.append(b);}}
+$('begin').addEventListener('click',async()=>{const b=$('begin');b.disabled=true;$('startMessage').textContent='카메라 준비 중...';try{if(!system){await new Promise(r=>setTimeout(r,350));system=$('arScene').systems['mindar-image-system'];}if(!system)throw new Error('AR 시스템이 준비되지 않음');await system.start();$('start').classList.add('hidden');}catch(e){console.error(e);$('startMessage').textContent='시작 실패: 카메라 권한, targets.mind 파일 및 HTTPS 접속을 확인하세요.';b.disabled=false;}});
+$('arScene').addEventListener('loaded',()=>{system=$('arScene').systems['mindar-image-system'];});
+$('arScene').addEventListener('arReady',()=>{$('start').classList.add('hidden');});
+$('arScene').addEventListener('arError',()=>{$('startMessage').textContent='AR 실행 오류: targets.mind 파일이 있는지 확인하세요.';$('begin').disabled=false;});
+for(const p of PLACES){const t=$('t'+p.index);t.addEventListener('targetFound',()=>{active=p.index;found.add(p.index);update();$('status').textContent=`${p.index+1}번 장소 인식: ${p.name}`;$('bottom').textContent=`${p.character} 등장!`;$('openCard').classList.add('show');});t.addEventListener('targetLost',()=>{$('openCard').classList.remove('show');$('bottom').textContent='다음 장소를 카메라로 찾아보세요.';});$('plane'+p.index).addEventListener('click',()=>showDetail(p.index));}
+$('openCard').addEventListener('click',()=>{if(active!==null)showDetail(active);});
+$('closeDetail').addEventListener('click',()=>{$('detail').classList.add('hidden');});
+$('viewCollection').addEventListener('click',()=>{makeCollection();$('collection').classList.remove('hidden');});
+$('closeCollection').addEventListener('click',()=>{$('collection').classList.add('hidden');});
+$('showList').addEventListener('click',()=>{const box=$('photoList');box.classList.toggle('hidden');box.innerHTML=PLACES.map(p=>`${p.index+1}. ${p.name} → ${p.character}`).join('<br>');});
+update();
+</script></body></html>

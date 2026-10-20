@@ -1,0 +1,202 @@
+[
+  {
+    "index": 0,
+    "name": "1. 쌍봉산 전망대",
+    "key": "01",
+    "character": "1_쌍봉산_봉봉이_전설",
+    "overlay": "assets/characters/01.webp",
+    "photo": "compiler_photos/00_01_a.jpg"
+  },
+  {
+    "index": 1,
+    "name": "2. 조암리 보호수",
+    "key": "02",
+    "character": "2_조암리_조암도리_일반",
+    "overlay": "assets/characters/02.webp",
+    "photo": "compiler_photos/01_02_a.jpg"
+  },
+  {
+    "index": 2,
+    "name": "2_조암리보호수(노송)",
+    "key": "02",
+    "character": "2_조암리_조암도리_일반",
+    "overlay": "assets/characters/02.webp",
+    "photo": "compiler_photos/02_02_b.jpg"
+  },
+  {
+    "index": 3,
+    "name": "3_수정마을 옛 샘터",
+    "key": "03",
+    "character": "3_수정이_일반",
+    "overlay": "assets/characters/03.webp",
+    "photo": "compiler_photos/03_03_a.jpg"
+  },
+  {
+    "index": 4,
+    "name": "4_어은리 옛장안면사무소터",
+    "key": "04",
+    "character": "4_어은리_은어리_희귀",
+    "overlay": "assets/characters/04.webp",
+    "photo": "compiler_photos/04_04_a.jpg"
+  },
+  {
+    "index": 5,
+    "name": "5_조암시장",
+    "key": "05",
+    "character": "5_조암시장_장터마스터_전설",
+    "overlay": "assets/characters/05.webp",
+    "photo": "compiler_photos/05_05_a.jpg"
+  },
+  {
+    "index": 6,
+    "name": "6_운평1리 마을회관",
+    "key": "06",
+    "character": "6_운평리_구름이_일반",
+    "overlay": "assets/characters/06.webp",
+    "photo": "compiler_photos/06_06_a.jpg"
+  },
+  {
+    "index": 7,
+    "name": "7_원안1리_거물마을",
+    "key": "07",
+    "character": "7_원안리정령_안이_희귀",
+    "overlay": "assets/characters/07.webp",
+    "photo": "compiler_photos/07_07_a.jpg"
+  },
+  {
+    "index": 8,
+    "name": "8_화수초 독립운동기념비",
+    "key": "08",
+    "character": "8_화수리정령_물꽃이_희귀",
+    "overlay": "assets/characters/08.webp",
+    "photo": "compiler_photos/08_08_a.jpg"
+  },
+  {
+    "index": 9,
+    "name": "10_멱우리",
+    "key": "10",
+    "character": "10_멱우리 정령_며구리_희귀",
+    "overlay": "assets/characters/10.webp",
+    "photo": "compiler_photos/09_10_a.jpg"
+  },
+  {
+    "index": 10,
+    "name": "11_한각1리 정류장",
+    "key": "11",
+    "character": "11_한각리정령_한가이",
+    "overlay": "assets/characters/11.webp",
+    "photo": "compiler_photos/10_11_a.jpg"
+  },
+  {
+    "index": 11,
+    "name": "12_사곡1리 장자터",
+    "key": "12",
+    "character": "12_사곡리정령_사곡이_전설",
+    "overlay": "assets/characters/12.webp",
+    "photo": "compiler_photos/11_12_a.jpg"
+  },
+  {
+    "index": 12,
+    "name": "13_사랑1리 마을회관",
+    "key": "13",
+    "character": "13_사랑리정령_사랑이_일반",
+    "overlay": "assets/characters/13.webp",
+    "photo": "compiler_photos/12_13_a.jpg"
+  },
+  {
+    "index": 13,
+    "name": "14_노진1리 경로당",
+    "key": "14",
+    "character": "14_노진리정령_가루_전설",
+    "overlay": "assets/characters/14.webp",
+    "photo": "compiler_photos/13_14_a.jpg"
+  },
+  {
+    "index": 14,
+    "name": "15_이화3리 마을회관",
+    "key": "15",
+    "character": "15_이화리정령_이화이_희귀",
+    "overlay": "assets/characters/15.webp",
+    "photo": "compiler_photos/14_15_a.jpg"
+  },
+  {
+    "index": 15,
+    "name": "16_화산2리 마을회관_배미",
+    "key": "16",
+    "character": "16_화산리정령_배미_전설",
+    "overlay": "assets/characters/16.webp",
+    "photo": "compiler_photos/15_16_a.jpg"
+  },
+  {
+    "index": 16,
+    "name": "17_석천1리 마을회관_낭깨",
+    "key": "17",
+    "character": "17_석천리 정령_낭깨_일반",
+    "overlay": "assets/characters/17.webp",
+    "photo": "compiler_photos/16_17_a.jpg"
+  },
+  {
+    "index": 17,
+    "name": "18_매향리 평화 생태공원",
+    "key": "18",
+    "character": "18_매향리정령_매향이_일반",
+    "overlay": "assets/characters/18.webp",
+    "photo": "compiler_photos/17_18_a.jpg"
+  },
+  {
+    "index": 18,
+    "name": "19_덕다2리 마을회관(구래마을)",
+    "key": "19",
+    "character": "19_덕다2리정령_더부기_전설",
+    "overlay": "assets/characters/19.webp",
+    "photo": "compiler_photos/18_19_a.jpg"
+  },
+  {
+    "index": 19,
+    "name": "20_1_독정1리(독쟁이)",
+    "key": "20_1",
+    "character": "20_1_독정1리_독이_희귀",
+    "overlay": "assets/characters/20_1.webp",
+    "photo": "compiler_photos/19_20_1_a.jpg"
+  },
+  {
+    "index": 20,
+    "name": "20_1_독정1리(한천)",
+    "key": "20_1",
+    "character": "20_1_독정1리_독이_희귀",
+    "overlay": "assets/characters/20_1.webp",
+    "photo": "compiler_photos/20_20_1_b.jpg"
+  },
+  {
+    "index": 21,
+    "name": "20_2_독정2리(감드러지) 정류장",
+    "key": "20_2",
+    "character": "20_2_독정2리정령_버선마리",
+    "overlay": "assets/characters/20_2.webp",
+    "photo": "compiler_photos/21_20_2_a.jpg"
+  },
+  {
+    "index": 22,
+    "name": "20_3_독정3리(감드러지)",
+    "key": "20_3",
+    "character": "20_3_독정3리정령_감드러지",
+    "overlay": "assets/characters/20_3.webp",
+    "photo": "compiler_photos/22_20_3_a.jpg"
+  },
+  {
+    "index": 23,
+    "name": "20_3_독정3리(거묵골)",
+    "key": "20_3",
+    "character": "20_3_독정3리정령_감드러지",
+    "overlay": "assets/characters/20_3.webp",
+    "photo": "compiler_photos/23_20_3_b.jpg"
+  },
+  {
+    "index": 24,
+    "name": "21_장안8리(온수골_장명초)",
+    "key": "21",
+    "character": "21_장안리정령_온이",
+    "overlay": "assets/characters/21.webp",
+    "photo": "compiler_photos/24_21_a.jpg"
+  }
+]
