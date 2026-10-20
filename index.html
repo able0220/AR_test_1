@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>우리 마을 AR 캐릭터 찾기</title>
+<title>우리 마을 AR 캐릭터 찾기 - 진단 개선판</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>
@@ -14,7 +14,7 @@ a-scene{position:fixed!important;inset:0}.top{position:fixed;top:0;left:0;right:
 <div id="detail" class="veil hidden"><div class="panel"><h1 id="detailTitle">캐릭터 발견</h1><img id="detailImage" class="confirmImg" alt="발견한 캐릭터"/><p id="detailDesc"></p><button id="closeDetail" class="btn" type="button">다른 장소 찾기</button><button id="viewCollection" class="btn secondary" type="button">수집 현황 보기</button></div></div>
 <div id="collection" class="veil hidden"><div class="panel"><h1>🎁 발견한 사진 목록</h1><p class="small">번호를 누르면 등록된 캐릭터 이름을 확인할 수 있어요. 찾지 않은 이미지는 잠금 표시로 보여요.</p><div id="collectionGrid" class="thumbs"></div><button id="closeCollection" class="btn secondary" type="button">돌아가기</button></div></div>
 <a-scene id="arScene" mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; autoStart: false;" color-space="sRGB" renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" embedded>
-<a-assets><img id="c0" src="./assets/characters/01.webp" crossorigin="anonymous"/>
+<a-assets timeout="10000"><img id="c0" src="./assets/characters/01.webp" crossorigin="anonymous"/>
 <img id="c1" src="./assets/characters/02.webp" crossorigin="anonymous"/>
 <img id="c2" src="./assets/characters/02.webp" crossorigin="anonymous"/>
 <img id="c3" src="./assets/characters/03.webp" crossorigin="anonymous"/>
@@ -74,10 +74,49 @@ let active=null; let system=null;
 function update(){ $('count').textContent=`${found.size}/${PLACES.length}`; $('meterFill').style.width=`${100*found.size/PLACES.length}%`; }
 function showDetail(i){const p=PLACES[i];active=i;found.add(i);update();$('detailTitle').textContent=`${i+1}번 · ${p.character}`;$('detailImage').src=p.overlay;$('detailDesc').textContent=`장소: ${p.name}`;$('detail').classList.remove('hidden');}
 function makeCollection(){const g=$('collectionGrid');g.replaceChildren();for(const p of PLACES){const b=document.createElement('button');b.type='button';b.className='thumb'+(found.has(p.index)?' done':'');b.textContent=found.has(p.index)?`${p.index+1} ✓`:`${p.index+1} 🔒`;b.onclick=()=>{if(found.has(p.index)){ $('collection').classList.add('hidden');showDetail(p.index); }};g.append(b);}}
-$('begin').addEventListener('click',async()=>{const b=$('begin');b.disabled=true;$('startMessage').textContent='카메라 준비 중...';try{if(!system){await new Promise(r=>setTimeout(r,350));system=$('arScene').systems['mindar-image-system'];}if(!system)throw new Error('AR 시스템이 준비되지 않음');await system.start();$('start').classList.add('hidden');}catch(e){console.error(e);$('startMessage').textContent='시작 실패: 카메라 권한, targets.mind 파일 및 HTTPS 접속을 확인하세요.';b.disabled=false;}});
+const scene=$('arScene');
+let isStarting=false;
+function waitForScene(maxMs=20000){
+  if(scene.hasLoaded && scene.systems && scene.systems['mindar-image-system']) return Promise.resolve(scene.systems['mindar-image-system']);
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{scene.removeEventListener('loaded',ready);reject(new Error('AR 장면 초기화 시간 초과: 캐릭터 파일이나 스크립트를 확인하세요.'));},maxMs);
+    function ready(){clearTimeout(timer);scene.removeEventListener('loaded',ready);const sys=scene.systems?.['mindar-image-system'];sys?resolve(sys):reject(new Error('MindAR 라이브러리 초기화 실패'));}
+    scene.addEventListener('loaded',ready);
+    if(scene.hasLoaded) ready();
+  });
+}
+async function checkFiles(){
+  const response=await fetch('./targets.mind',{cache:'no-store'});
+  if(!response.ok) throw new Error(`targets.mind 응답 오류: HTTP ${response.status}`);
+  const size=Number(response.headers.get('content-length')||0);
+  if(size>0 && size<100) throw new Error('targets.mind 파일이 너무 작습니다. 컴파일 파일을 확인하세요.');
+}
+$('begin').addEventListener('click',async()=>{
+  if(isStarting)return;
+  isStarting=true;const b=$('begin');b.disabled=true;
+  const msg=$('startMessage');msg.textContent='파일 및 카메라 환경을 확인하는 중...';
+  try{
+    if(!window.isSecureContext) throw new Error('HTTPS 주소에서 접속해야 합니다.');
+    if(!navigator.mediaDevices?.getUserMedia) throw new Error('이 브라우저는 카메라 접근을 지원하지 않습니다. Chrome 또는 Safari에서 직접 열어주세요.');
+    await checkFiles();
+    msg.textContent='AR 장면 로딩 중...';
+    system=await waitForScene();
+    msg.textContent='카메라 권한 요청 및 인식 데이터 로딩 중... (25장이라 시간이 걸릴 수 있어요)';
+    await system.start();
+    $('start').classList.add('hidden');
+  }catch(e){
+    console.error('AR 시작 실패:',e);
+    const raw=e?.message||String(e);
+    let tip='';
+    if(e?.name==='NotAllowedError') tip=' 카메라 권한이 차단되어 있습니다. 주소창의 사이트 권한에서 허용해주세요.';
+    else if(e?.name==='NotFoundError')tip=' 카메라 장치를 찾지 못했습니다.';
+    else if(e?.name==='NotReadableError')tip=' 다른 앱이 카메라를 사용 중일 수 있습니다.';
+    msg.textContent=`시작 실패: ${raw}${tip}`;
+  }finally{isStarting=false;b.disabled=false;}
+});
 $('arScene').addEventListener('loaded',()=>{system=$('arScene').systems['mindar-image-system'];});
 $('arScene').addEventListener('arReady',()=>{$('start').classList.add('hidden');});
-$('arScene').addEventListener('arError',()=>{$('startMessage').textContent='AR 실행 오류: targets.mind 파일이 있는지 확인하세요.';$('begin').disabled=false;});
+$('arScene').addEventListener('arError',(event)=>{$('startMessage').textContent='AR 실행 오류: '+(event?.detail?.message||'카메라/타깃 로딩 실패. targets.mind와 권한 확인');$('begin').disabled=false;});
 for(const p of PLACES){const t=$('t'+p.index);t.addEventListener('targetFound',()=>{active=p.index;found.add(p.index);update();$('status').textContent=`${p.index+1}번 장소 인식: ${p.name}`;$('bottom').textContent=`${p.character} 등장!`;$('openCard').classList.add('show');});t.addEventListener('targetLost',()=>{$('openCard').classList.remove('show');$('bottom').textContent='다음 장소를 카메라로 찾아보세요.';});$('plane'+p.index).addEventListener('click',()=>showDetail(p.index));}
 $('openCard').addEventListener('click',()=>{if(active!==null)showDetail(active);});
 $('closeDetail').addEventListener('click',()=>{$('detail').classList.add('hidden');});
